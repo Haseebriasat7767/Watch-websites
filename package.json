@@ -12,7 +12,9 @@
     "verify": "tsx scripts/verify.ts",
     "render": "tsx scripts/render.ts && tsx scripts/texture.ts && tsx scripts/tint.ts",
     "check": "npm run typecheck && npm run verify && tsx scripts/texture.ts sunburst",
-    "render:textures": "tsx scripts/texture.ts && tsx scripts/tint.ts"
+    "render:textures": "tsx scripts/texture.ts && tsx scripts/tint.ts",
+    "deploy": "npx --yes vercel@latest --prod",
+    "deploy:preview": "npx --yes vercel@latest"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
@@ -31,5 +33,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^8.3.1"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

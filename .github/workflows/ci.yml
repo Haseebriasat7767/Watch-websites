@@ -1,0 +1,46 @@
+name: CI
+
+# Gates the Vercel Git integration: a push that breaks the geometry checks or
+# the production build never reaches a deploy.
+on:
+  push:
+    branches: [main, 'arena/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · geometry · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the `engines` pin in package.json (vite 8 needs ^20.19 || >=22.12).
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck, geometry/manifold/targeting assertions, texture plates
+        run: npm run check
+
+      - name: Production build
+        run: npm run build
+
+      - name: Upload reference stills
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-stills
+          path: preview/*.png
+          if-no-files-found: ignore
+          retention-days: 14

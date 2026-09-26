@@ -4,6 +4,8 @@ An ultra-premium, single-page **3D luxury watch customizer** — React Three Fib
 `@react-three/drei` and Tailwind CSS v4, dark-themed, mobile-first and engineered
 to hold a locked 60 FPS on iOS and Android without thermal throttling.
 
+[![CI](https://github.com/Haseebriasat7767/Watch-websites/actions/workflows/ci.yml/badge.svg)](https://github.com/Haseebriasat7767/Watch-websites/actions/workflows/ci.yml)
+
 ![The atelier in a desktop viewport](preview/desktop.png)
 
 ---
@@ -16,6 +18,55 @@ npm run dev        # http://localhost:5173
 npm run build      # typecheck + production bundle
 npm run check      # typecheck + the full 3D verification suite
 ```
+
+---
+
+## Deploy on Vercel
+
+The repository is already configured for it — `vercel.json` pins the framework,
+the build command, the output directory and the response headers, and
+`package.json` pins the Node runtime (vite 8 requires `^20.19 || >=22.12`, so
+`"engines": { "node": "22.x" }` stops Vercel from picking a runtime the
+toolchain cannot use).
+
+> **Which branch?** The app lives on `arena/01a0db95-watch-websites` (PR #1);
+> `main` still holds only this README. Either **merge PR #1 first** so `main` is
+> deployable, or — when importing the project — set the **Production Branch** to
+> `arena/01a0db95-watch-websites`. Importing the default branch before merging
+> will deploy an empty project.
+
+**Option A · Git integration (recommended — deploys on every push)**
+
+1. Merge PR #1 into `main`.
+2. Go to [vercel.com/new](https://vercel.com/new) and import
+   `Haseebriasat7767/Watch-websites`. Vercel reads `vercel.json`, so there is
+   nothing to configure.
+3. Every push to `main` ships to production; every other branch and PR gets its
+   own preview URL.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FHaseebriasat7767%2FWatch-websites&project-name=aurelis-watch-atelier&repository-name=aurelis-watch-atelier)
+
+**Option B · CLI**
+
+```bash
+npm run deploy            # vercel --prod
+npm run deploy:preview    # a throwaway preview URL
+```
+
+**What the deploy actually runs**
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| `framework` | `vite` | static output, global edge CDN |
+| `installCommand` | `npm ci` | reproducible installs from the lockfile |
+| `buildCommand` | `npm run verify && npm run build` | the 112 geometry assertions gate the deploy — broken 3D never ships |
+| `outputDirectory` | `dist` | |
+
+Plus: `immutable` caching on `/assets/*` and `/draco/*` (every asset is
+content-hashed), `must-revalidate` on `index.html`, an SPA rewrite so deep links
+resolve, and `nosniff` / `Referrer-Policy` / HSTS / `Permissions-Policy` on
+everything. `.github/workflows/ci.yml` runs the same checks on every push, so a
+red build blocks the deploy at the source.
 
 ---
 
@@ -68,6 +119,8 @@ A 40.5 mm automatic in polished metal, built entirely from parametric geometry �
 ## Architecture
 
 ```
+vercel.json                   ← deploy config: build gate, headers, SPA rewrite
+.github/workflows/ci.yml      ← typecheck · 112 assertions · production build
 src/
 ├─ WatchCustomizer.tsx        ← the single-page component: overlays + the studio
 ├─ App.tsx                    ← mounts it
@@ -233,6 +286,14 @@ DEBUG_BACKFACES=1 npm run render   # highlight any inside-out face in magenta
 Chrome/Edge 111+, Safari 16.4+, Firefox 121+ — anything with WebGL2 and
 `OffscreenCanvas` (the texture pipeline falls back to `HTMLCanvasElement` where
 `OffscreenCanvas` is missing).
+
+## Hosting notes
+
+The build is fully static — one HTML file, content-hashed JS/CSS, and the Draco
+decoder under `/draco/` if you later point `MODEL_URL` at a compressed GLB. There
+is no server, no environment variable and no runtime secret, so any static host
+works (Vercel, Netlify, Cloudflare Pages, GitHub Pages with a `base` tweak). On
+Vercel, `npm run build` is the whole story.
 
 ---
 
