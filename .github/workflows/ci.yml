@@ -1,5 +1,8 @@
 name: CI
 
+# Action majors are pinned to the versions that run on the Node 24 runner
+# runtime (checkout/setup-node/upload-artifact v5).
+
 # Gates the Vercel Git integration: a push that breaks the geometry checks or
 # the production build never reaches a deploy.
 on:
@@ -15,13 +18,14 @@ concurrency:
 jobs:
   verify:
     name: typecheck · geometry · build
-    runs-on: ubuntu-latest
+    # Pinned: `ubuntu-latest` migrates to Ubuntu 26 on 2026-10-19.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           # Matches the `engines` pin in package.json (vite 8 needs ^20.19 || >=22.12).
           node-version: '22'
@@ -38,7 +42,7 @@ jobs:
 
       - name: Upload reference stills
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: preview-stills
           path: preview/*.png
