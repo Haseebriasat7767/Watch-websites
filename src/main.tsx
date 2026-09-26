@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import WatchCustomizer from "./WatchCustomizer";
 import "./index.css";
+import "./atelier.css";
 
 const container = document.getElementById("root");
 
