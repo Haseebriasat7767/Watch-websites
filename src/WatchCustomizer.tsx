@@ -495,7 +495,7 @@ export default function WatchCustomizer() {
   const onReady = useCallback(() => setReady(true), []);
 
   return (
-    <main className="relative h-dvh w-full overflow-hidden bg-obsidian-950 select-none">
+    <main className="atelier-app relative h-dvh w-full overflow-hidden bg-obsidian-950 select-none">
       {/* ── ambient studio glow behind the canvas ─────────────────────────── */}
       <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
         <div
