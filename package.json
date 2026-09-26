@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "AURELIS \u2014 an ultra-premium interactive 3D luxury watch customizer. React Three Fiber + drei + Tailwind CSS v4, engineered for 60 FPS on mobile.",
+  "description": "AURELIS \u2014 a scroll-driven WebGL exhibition through the Laureate No. 01. React Three Fiber + drei + Vite, engineered for 60 FPS on mobile.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "verify": "tsx scripts/verify.ts",
     "render": "tsx scripts/render.ts && tsx scripts/texture.ts && tsx scripts/tint.ts",
+    "storyboard": "tsx scripts/storyboard.ts",
     "check": "npm run typecheck && npm run verify && tsx scripts/texture.ts sunburst",
     "render:textures": "tsx scripts/texture.ts && tsx scripts/tint.ts",
     "deploy": "npx --yes vercel@latest --prod",

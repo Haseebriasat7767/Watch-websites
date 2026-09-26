@@ -7,6 +7,10 @@ dist-ssr
 
 # Software-render intermediates (the PNGs are what gets committed)
 preview/*.ppm
+preview/**/*.ppm
+
+# Per-chapter storyboard frames (regenerate with `npm run storyboard`)
+preview/story/
 
 # Local env
 .env

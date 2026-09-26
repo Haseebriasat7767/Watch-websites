@@ -1,12 +1,17 @@
-# AURELIS · Bespoke Timepiece Atelier
+# AURELIS · Laureate No. 01 — an interactive exhibition
 
-An ultra-premium, single-page **3D luxury watch customizer** — React Three Fiber,
-`@react-three/drei` and Tailwind CSS v4, dark-themed, mobile-first and engineered
-to hold a locked 60 FPS on iOS and Android without thermal throttling.
+A scroll-driven **WebGL exhibition**, not a product page: one persistent canvas,
+nine chapters, and a camera that travels through the timepiece — case, dial,
+calibre, the hands that finish it — under the visitor's scrollbar. React Three
+Fiber, `@react-three/drei`, TypeScript and Vite, engineered to hold 60 FPS on a
+phone.
 
 [![CI](https://github.com/Haseebriasat7767/Watch-websites/actions/workflows/ci.yml/badge.svg)](https://github.com/Haseebriasat7767/Watch-websites/actions/workflows/ci.yml)
 
-![The atelier in a desktop viewport](preview/desktop.png)
+![The nine chapters of the exhibition, rendered headlessly](preview/storyboard.jpg)
+
+*The nine chapter framings, rendered without a browser by
+`npm run storyboard` — see [Verification](#verification).*
 
 ---
 
@@ -17,7 +22,122 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # typecheck + production bundle
 npm run check      # typecheck + the full 3D verification suite
+npm run storyboard # headless render of every chapter's composition
 ```
+
+---
+
+## The journey
+
+Scrolling is the only navigation. Page progress is normalised once per frame and
+mapped to chapter progress, which drives the camera waypoint, the watch
+transform, the light rig, the atmosphere and the narrative opacity — in that
+order, from a single rAF tick.
+
+| # | Chapter | What the camera does | What is revealed |
+| --- | --- | --- | --- |
+| 01 | Enter the Atelier | wide, almost black, a slow drift | the timepiece emerging from the dark |
+| 02 | The Silhouette | closes in, turntable running | proportion, the whole object |
+| 03 | The Case | rakes along the flank | lugs, coin edge, crown, finishing |
+| 04 | The Dial | pushes through the sapphire | indices, hands, the sunburst field |
+| 05 | The Calibre | travels *through* the watch to behind it | the case back withdraws, calibre A01 runs |
+| 06 | Human Hands | raking macro + a blended atelier image | bevels, polish, the bench |
+| 07 | Materials | pulls back to the full object | the contextual material selector appears |
+| 08 | On the Wrist | drops back and to the side | scale, daily life |
+| 09 | Laureate No. 01 | a calm hero composition, light lifts | the closing statement and the CTA |
+
+The camera holds on each waypoint for the first third of a chapter — the beat
+during which its narrative is legible — then eases to the next. Nothing cuts.
+
+**Chapter 05 is a real mechanism.** The exhibition back slides away and a
+parametric automatic calibre is exposed: a perlaged main plate, Côtes-de-Genève
+bridges, a going train that turns, a balance beating at 4 Hz and 31 synthetic
+rubies (`src/three/Calibre.tsx`, ~12 draw calls, geometry built once).
+
+**Configuration is contextual, not a dashboard.** The material selector floats
+in during chapter 07 and is otherwise reachable only through the discreet
+*Configure* control. There is no permanent sidebar anywhere in the experience.
+
+---
+
+## The scroll engine
+
+```
+scroll progress            one passive listener, one rAF loop
+      ↓
+chapter progress           locate() → { chapter, local }
+      ↓
+camera waypoint interpolation + screen-space framing bias
+      ↓
+watch position / rotation / scale / exhibition
+      ↓
+lighting, atmosphere, and the HTML narrative — same tick
+```
+
+Three rules keep it fast:
+
+1. **Scroll never touches React state.** The `story` bus (`storyState.ts`) is a
+   mutable object; only a *chapter change* is published to React, through
+   `useSyncExternalStore`. The 3D tree renders once for the whole visit.
+2. **One sample per frame.** `sampleStory()` writes into a single pre-allocated
+   record (`activeSample`); the camera rig, the lights, the dust and the calibre
+   all read from it. No allocation in the loop.
+3. **DOM mutations ride the same tick.** Narrative panels, the progress rail and
+   the atmosphere layers subscribe to `subscribeFrame` and write their own
+   `style` properties, so HTML and WebGL are frame-locked.
+
+**Framing bias.** Each chapter declares where the timepiece should sit in the
+frame (`bias`, in fractions of the half viewport, plus a portrait override). The
+rig *trucks* the camera rather than moving the subject, so the modelling of the
+light is untouched while the watch stays clear of the narrative column — and on
+a phone the composition lifts above the bottom-anchored text automatically.
+
+---
+
+## Architecture
+
+```
+src/
+├─ main.tsx                   ← mounts the exhibition
+├─ index.css / atelier.css    ← design tokens + the exhibition stylesheet
+├─ story/
+│  ├─ ImmersiveStory.tsx      ← root: scroll engine, canvas, narrative, chrome
+│  ├─ StoryCanvas.tsx         ← persistent <Canvas>, drag orbit, adaptive DPR, GL boundary
+│  ├─ StorySections.tsx       ← nine semantic <section>s, frame-locked fades
+│  ├─ StoryOverlay.tsx        ← wordmark, counter, controls, material selector
+│  ├─ StoryProgress.tsx       ← hairline rail + keyboard chapter marks
+│  ├─ StoryFallback.tsx       ← the written exhibition (no WebGL required)
+│  ├─ storyConfig.ts          ← THE SCRIPT: nine chapters as data
+│  ├─ storyTypes.ts           ← chapter / waypoint types
+│  ├─ storyState.ts           ← the scroll bus + coarse React subscriptions
+│  ├─ useStoryProgress.ts     ← one listener, one rAF loop
+│  ├─ useReducedMotion.ts     ← OS preference + in-page override
+│  └─ useAtelierAudio.ts      ← synthesised room tone (no audio download)
+├─ three/
+│  ├─ CameraWaypoints.ts      ← interpolation, framing bias, the shared sample
+│  ├─ StoryWatchStage.tsx     ← the rig: camera, watch transform, sub-assemblies
+│  ├─ StoryLighting.tsx       ← baked gallery IBL + scroll-driven light rig
+│  ├─ Calibre.tsx             ← the running calibre A01
+│  ├─ Atmosphere.tsx          ← 800 motes of dust in one additive draw call
+│  ├─ ProceduralWatch.tsx     ← the atelier timepiece (unchanged geometry, new part refs)
+│  ├─ geometry.ts             ← lathe/revolve solids, hands, indices, bracelet
+│  ├─ materials.tsx           ← material set + MaterialDriver
+│  └─ Studio.tsx              ← the original studio rig (still used by the legacy view)
+└─ lib/
+   ├─ config.ts               ← material presets, sub-mesh targeting, scene constants
+   ├─ dialTexture.ts          ← canvas atelier: sunburst, fumé, guilloché
+   ├─ color.ts                ← swatch + texture colour maths
+   └─ telemetry.ts            ← external FPS/DPR store
+
+scripts/
+├─ verify.ts                  ← 112 headless geometry/texture/targeting assertions
+├─ render.ts                  ← software rasterizer (now camera/pose parameterised)
+└─ storyboard.ts              ← renders every chapter's composition, headlessly
+```
+
+Adding a chapter is a data edit: append an entry to `storyConfig.ts` with its
+copy, camera waypoint, watch transform and lighting mood. Nothing in the render
+loop is chapter-aware.
 
 ---
 
@@ -29,15 +149,13 @@ the build command, the output directory and the response headers, and
 `"engines": { "node": "22.x" }` stops Vercel from picking a runtime the
 toolchain cannot use).
 
-> **Which branch?** The app lives on `arena/01a0db95-watch-websites` (PR #1);
-> `main` still holds only this README. Either **merge PR #1 first** so `main` is
-> deployable, or — when importing the project — set the **Production Branch** to
-> `arena/01a0db95-watch-websites`. Importing the default branch before merging
-> will deploy an empty project.
+> **Which branch?** The exhibition lives on `arena/01a0dc8b-watch-websites`.
+> Either merge it into `main` before importing the project, or set the
+> **Production Branch** to that branch in the Vercel dashboard.
 
 **Option A · Git integration (recommended — deploys on every push)**
 
-1. Merge PR #1 into `main`.
+1. Merge the exhibition branch into `main`.
 2. Go to [vercel.com/new](https://vercel.com/new) and import
    `Haseebriasat7767/Watch-websites`. Vercel reads `vercel.json`, so there is
    nothing to configure.
@@ -70,111 +188,29 @@ red build blocks the deploy at the source.
 
 ---
 
-## What you get
-
-**A configurator that is actually coupled to the mesh.** Every material option
-carries a physical vector — `color`, `roughness`, `metalness` — and a click eases
-the *live* material towards it over ~140 ms, frame-rate-independently, from inside
-the render loop. Nothing is swapped, remounted or re-uploaded; it reads as a
-jeweller rotating a part under the light.
-
-| Channel                    | Options                                                                        |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| **I · Casing Materials**   | Polished Gold `#D4AF37` · Platinum Silver `#E5E4E2` · Stealth Matte Black `#1A1A1A` |
-| **II · Bezel & Dial Face** | Emerald Sunburst `#097969` · Midnight Horizon `#191970` · Crimson Guilloché `#8B0000` |
-
-The dial's finish changes with the variant: radial sunburst brushing, a fumé
-lacquer gradient, or a rose-engine guilloché turning — generated at load time on
-a canvas, so switching is a pointer move with zero GPU uploads.
-
-![The three dial finishes tinted by their presets](preview/dial-finishes.png)
-
-*Albedo = preset colour × finish map, composited in linear space exactly as the
-shader does — the check that each configured hue survives its texture. The
-finish maps are deliberately neutral in hue and stay luminous, because `map` is
-multiplied into `material.color`: baked-in colour would make the configurator's
-physical vector a no-op, and a dark map would drag Emerald, Midnight and Crimson
-down with it.*
-
----
-
 ## The timepiece
 
-A 40.5 mm automatic in polished metal, built entirely from parametric geometry —
-**22k triangles of case, and 50k including the bracelet, in ~20 draw calls**:
+A 40 mm automatic built entirely from parametric geometry — **22k triangles of
+case, 50k including the bracelet, in ~20 draw calls**:
 
-- fluted coin-edge bezel with a printed 0–60 dive scale and a luminous pip at twelve
+- fluted coin-edge bezel with a printed 0–60 scale and a luminous pip at twelve
 - box-domed sapphire crystal, double AR, seated over a conical rehaut
-- applied indices — polished metal frames with recessed luminous inlays, the
-  twelve doubled in the classic style
-- sword hands frozen at 10:09:36, plus a 72-hour power-reserve subdial
-- screw-down crown between guards, lugs integral to a fluted case band
-- five-link bracelet, tapering 10 % toward the clasp, laid on a wrist curve
-- exhibition case back with a skeleton rotor
+- applied indices — polished frames with recessed luminous inlays
+- sword hands, a 72-hour power-reserve subdial, a screw-down crown between guards
+- five-link tapering bracelet laid on a wrist curve, in two instanced draws
+- an exhibition case back that opens in chapter 05 onto the running calibre
 
-![The atelier in a mobile viewport](preview/mobile.png)
+Three case materials and three dial finishes are driven live: a click eases the
+*existing* material's physical vector (`color` / `roughness` / `metalness`)
+toward the preset over ~140 ms from inside the render loop. Nothing is swapped,
+remounted or re-uploaded, and the scene is never rebuilt.
 
----
+| Channel | Options |
+| --- | --- |
+| **Case** | Polished Gold `#D4AF37` · Platinum Silver `#E5E4E2` · Stealth Matte Black `#1A1A1A` |
+| **Dial** | Emerald Sunburst `#097969` · Midnight Horizon `#191970` · Crimson Guilloché `#8B0000` |
 
-## Architecture
-
-```
-vercel.json                   ← deploy config: build gate, headers, SPA rewrite
-.github/workflows/ci.yml      ← typecheck · 112 assertions · production build
-src/
-├─ WatchCustomizer.tsx        ← the single-page component: overlays + the studio
-├─ App.tsx                    ← mounts it
-├─ index.css                  ← design tokens (@theme), glass/gold/hairline utilities
-├─ lib/
-│  ├─ config.ts               ← material presets, sub-mesh targeting, specs, camera matrix
-│  ├─ dialTexture.ts          ← canvas atelier: sunburst, fumé, guilloché, dive scale
-│  ├─ color.ts                ← swatch + texture colour maths
-│  └─ telemetry.ts            ← external FPS/DPR store (readout renders in isolation)
-└─ three/
-   ├─ Studio.tsx              ← studio lighting engine, stage floor, shadow bake
-   ├─ ProceduralWatch.tsx     ← the atelier timepiece assembly
-   ├─ GLTFWatch.tsx           ← the production GLB lane (Draco forced)
-   ├─ geometry.ts             ← lathe/revolve solids, hands, indices, bracelet
-   ├─ materials.tsx           ← material set, GLTF sub-mesh resolver, MaterialDriver
-   └─ useStageScale.ts        ← hero framing + the stage-to-floor relationship
-
-scripts/
-├─ verify.ts                  ← 112 headless geometry/texture/targeting assertions
-└─ render.ts                  ← software rasterizer → preview stills (no browser)
-```
-
-### Layout
-
-A floating glass sidebar (`absolute left-6 top-6 bottom-6 w-80 backdrop-blur-md`,
-`rounded-2xl`, `z-10`) carries the two configurator groups, an allocation plate and
-the **Reserve Custom Timepiece** call to action. A monospaced technical dossier
-sits opposite it — *Movement: Caliber R3F-Automatic · Power Reserve: 72 Hours ·
-Depth Rating: 100m* — followed by the live configuration readout and the frame
-telemetry. Below `lg`, the sidebar becomes a bottom configurator sheet and the
-dossier a compact spec strip, so the studio stays centre stage on a phone.
-
----
-
-## Studio lighting engine
-
-No default ambient/directional pair. A real three-point studio array:
-
-```tsx
-<Environment preset="studio" environmentIntensity={1.5} />   // the softbox wall
-<ambientLight intensity={0.3} />                             // base fill, locked
-<spotLight position={[0.9, 3.5, 2.4]} castShadow … />        // key + micro-shadow
-```
-
-plus two rim kickers (cool left, warm right) that graze the coin edge, and a
-soft top fill. The key is the *only* shadow caster: it plants the micro-shadow
-directly beneath the casing. If the HDR preset cannot be fetched, an error
-boundary swaps in an equivalent `Lightformer` softbox rig, so the studio lights
-up on an isolated network too.
-
-**Camera matrix:** `position [0, 0, 3.5]`, FOV `45`. Orbit is constrained to
-`minDistance 2 · maxDistance 5.5 · enablePan={false}`, with the polar angle
-clamped to `Math.PI / 3 … Math.PI / 1.8` — the camera can never clip underneath
-the studio floor.
+![The three dial finishes tinted by their presets](preview/dial-finishes.png)
 
 ---
 
@@ -182,18 +218,21 @@ the studio floor.
 
 | Technique                              | What it buys                                                                 |
 | -------------------------------------- | ---------------------------------------------------------------------------- |
-| `<BakeShadows />`                      | the stage is static, so the shadow map is rendered **once**, not per frame     |
+| Zero React renders while scrolling     | the scroll bus is a mutable object; only a chapter change reaches React        |
+| One allocation-free sample per frame   | camera, lights, dust and calibre all read the same pre-computed record         |
 | 2 instanced draws for all 32 links     | 28k bracelet triangles cost two draw calls                                    |
 | Materials shared, geometry memoised    | a click mutates five materials; no allocation, no remount, no GPU upload       |
 | Three dial finishes prepared at boot   | switching a variant is a `Texture` pointer swap — zero dropped frames          |
 | `<Preload all />`                      | every shader program compiles before the first interaction                     |
 | Rolling-window FPS governor            | nudges the render scale between 1.0×/1.35×/device DPR to stay inside the thermal envelope |
 | `dpr={[1, 1.85]}` + `AdaptiveDpr`      | prevents 3× device-pixel-ratio phones from rendering 9× the pixels             |
-| Analytic lighting budget               | 4 lights, all low-cost; no post-processing pass                                |
+| Analytic lighting budget               | 5 lights, one shadow caster, no post-processing pass                           |
+| Baked Lightformer IBL (`frames={1}`)   | the gallery environment is rendered once at 256² — and never fetched from a CDN |
+| CSS focus-pull instead of a DoF pass   | the frame softens while the camera travels for the cost of one composited blur |
 | Procedural, zero-network asset         | the whole timepiece costs 0 bytes of model bandwidth and 22k triangular budget |
 
-The readout in the HUD is live: it reports the measured FPS and the render scale
-the governor has settled on.
+The dust field, the calibre and the turntable all stop dead under
+`prefers-reduced-motion`.
 
 ---
 
@@ -245,7 +284,14 @@ clearing the stage, and the case fitting the locked frustum; the canvas textures
 are checked to print their scales and marks; and the GLTF resolver is exercised
 against a synthetic imported scene graph.
 
-`npm run render` runs a **software rasterizer** over the exact same geometry
+`npm run storyboard` answers the question a screenshot would, without a browser:
+for each chapter the story sampler is evaluated at its readable beat, and the
+resulting camera pose, framing bias and watch transform are fed to the software
+rasterizer. It is how the composition of all nine chapters above was verified —
+is the timepiece in frame, at the intended scale, from the intended angle, and
+does the camera ever end up inside the case.
+
+`npm run render` runs the same **software rasterizer** over the exact same geometry
 graph and writes `preview/desktop.ppm` + `preview/mobile.ppm` — the stills at the
 top of this document. It is a stylised studio model rather than a PBR match, and
 exists to catch composition and mapping regressions without a GPU.
@@ -268,16 +314,25 @@ DEBUG_BACKFACES=1 npm run render   # highlight any inside-out face in magenta
 
 ## Accessibility & resilience
 
-- Material options are real `<button>`s with `aria-pressed`; the CTA is keyboard
-  reachable with a visible focus ring.
-- The loading overlay is a polite live region and announces *Optimizing 3D Mesh
-  Assets…*; an 8-second failsafe releases it if a scene never reports ready.
-- A WebGL failure renders a composed message instead of a blank page.
-- `prefers-reduced-motion` stops the turntable and collapses every transition.
-- Losing the 2D canvas (texture generation) degrades to exact preset colours
-  rather than throwing.
-- `touch-action: none` on the canvas so orbits never scroll the page, and
-  one-finger rotate / two-finger dolly-rotate gestures mapped explicitly.
+The experience does not depend on WebGL.
+
+- **The story is real HTML.** Nine semantic `<section>`s with real headings and
+  prose sit above the canvas; scroll only changes their opacity, so the whole
+  narrative is available to a screen reader, to search engines and with styles
+  off. The canvas itself is `aria-hidden` and purely presentational.
+- **A written exhibition** replaces the scene when WebGL is unavailable or the
+  context is lost mid-visit — same chapters, same words, with photography.
+- **Reduced motion** is honoured from the OS *and* toggleable in-page
+  (*Motion on/off*): the turntable, parallax, dust drift, focus pull and long
+  camera travels stop; the chapters still change, faster and simpler.
+- **Keyboard**: a skip link, focus-visible rings on every control, and chapter
+  marks on the progress rail that are real buttons with `aria-label`s.
+- **Audio never autoplays.** It starts off; the graph is only built on the click
+  that enables it, and it is synthesised — no audio file is downloaded.
+- The chapter counter is a polite live region; the material selector is `inert`
+  while hidden, so it cannot be tabbed into behind the story.
+- `touch-action: pan-y` on the canvas: a phone scrolls the story and turns the
+  watch with the same finger.
 
 ---
 
@@ -299,10 +354,11 @@ Vercel, `npm run build` is the whole story.
 
 ## Notes on the references
 
-The three asset links in the brief resolve to placeholder hosts, so they carry no
-retrievable design data. The visual language here is built instead from the
-conventions that set the frame for this genre of product: a dark studio void with
-a single luminous pool behind the subject, a floating glass instrument panel with
-a hairline-gold accent, a serif wordmark at wide tracking over monospaced
-telemetry, and one hero object orbited in a fixed 45° frustum. No third-party
-imagery, fonts beyond Google Fonts, or assets are bundled.
+The interaction *architecture* — a persistent canvas, a guided scroll journey
+through a subject, held beats between camera waypoints, narrative that changes
+with the scene — is the lesson taken from long-form WebGL exhibitions such as
+the Getty's Persepolis experience. Nothing else is: no branding, artwork, copy,
+layout or asset is derived from any third party. The visual language here is
+its own — obsidian, champagne gold and ivory, hairline rules, a serif at wide
+measure over monospaced technical labels — and every pixel of the timepiece is
+generated at runtime from the parametric geometry in this repository.

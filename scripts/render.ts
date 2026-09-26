@@ -117,10 +117,31 @@ function sampleFace(u: number, v: number) {
   return { tone, albedoScale: 1 };
 }
 
-function buildScene(stageScale: number): Part[] {
+/** Story-driven placement of the timepiece inside the exhibition space. */
+export type WatchPose = {
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: number;
+  /** 0 → sealed case · 1 → exhibition back withdrawn. */
+  exhibition?: number;
+};
+
+export function buildScene(
+  stageScale: number,
+  pose: WatchPose = {},
+  includeFloor = true,
+): Part[] {
   const parts: Part[] = [];
+  const [px, py, pz] = pose.position ?? [0, 0, 0];
+  const [rx, ry, rz] = pose.rotation ?? [0, 0, 0];
+  const poseScale = (pose.scale ?? 1) * stageScale;
+  const open = pose.exhibition ?? 0;
   const root = new THREE.Matrix4()
-    .makeScale(stageScale, stageScale, stageScale)
+    .makeTranslation(px, py, pz)
+    .multiply(
+      new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, ry, rz, "YXZ")),
+    )
+    .multiply(new THREE.Matrix4().makeScale(poseScale, poseScale, poseScale))
     .multiply(ROOT_TILT);
 
   const add = (
@@ -194,11 +215,11 @@ function buildScene(stageScale: number): Part[] {
     add(lugTop, "metal", at(x, 0, 0));
     add(lugBottom, "metal", at(x, 0, 0));
   }
-  add(buildCaseBackRing(), "metal");
+  add(buildCaseBackRing(), "metal", at(0, 0, -0.95 * open));
   add(
     new THREE.CylinderGeometry(0.5, 0.5, 0.02, 48),
     "glass",
-    at(0, 0, -0.25, Math.PI / 2),
+    at(0, 0, -0.25 - 0.95 * open, Math.PI / 2),
   );
   add(buildRotorGeometry(), "movement", at(0, 0, -0.181, 0.7));
 
@@ -231,6 +252,8 @@ function buildScene(stageScale: number): Part[] {
       );
     }
   }
+
+  if (!includeFloor) return parts;
 
   // studio floor — sibling of the stage group, dissolved edge
   // Segmented disc: a 64-triangle fan would span the camera plane and be
@@ -284,27 +307,37 @@ function lightRig(stageScale: number): LightRig {
   };
 }
 
-function render({
+export function render({
   width,
   height,
   stageScale,
   label,
+  pose,
+  view,
+  floor = true,
 }: {
   width: number;
   height: number;
   stageScale: number;
   label: string;
+  pose?: WatchPose;
+  view?: {
+    position: [number, number, number];
+    target: [number, number, number];
+    fov?: number;
+  };
+  floor?: boolean;
 }) {
-  const parts = buildScene(stageScale);
+  const parts = buildScene(stageScale, pose, floor);
   const rig = lightRig(1);
   const camera = new THREE.PerspectiveCamera(
-    SCENE.camera.fov,
+    view?.fov ?? SCENE.camera.fov,
     width / height,
-    SCENE.camera.near,
+    0.05,
     SCENE.camera.far,
   );
-  camera.position.set(...SCENE.camera.position);
-  camera.lookAt(0, 0, 0);
+  camera.position.set(...(view?.position ?? SCENE.camera.position));
+  camera.lookAt(...(view?.target ?? ([0, 0, 0] as [number, number, number])));
   camera.updateMatrixWorld();
 
   const colour = new Float32Array(width * height * 3);
@@ -339,7 +372,7 @@ function render({
       x: ((projected.x / w + 1) / 2) * width,
       y: ((1 - projected.y / w) / 2) * height,
       z: projected.z / w,
-      clipped: w <= SCENE.camera.near,
+      clipped: w <= 0.05,
     };
   };
 
@@ -646,6 +679,10 @@ function shade({
 }
 
 /* ── run ──────────────────────────────────────────────────────────────────── */
+const isEntry = process.argv[1]?.endsWith("render.ts") === true;
+if (isEntry) runPreviewShots();
+
+function runPreviewShots() {
 console.log("Software studio render");
 const FIT_RADIUS = SCENE.fitRadius;
 const fit = (width: number, height: number) => {
@@ -666,3 +703,4 @@ for (const shot of [
   render({ ...shot, stageScale: fit(shot.width, shot.height) });
 }
 console.log("done");
+}

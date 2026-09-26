@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import WatchCustomizer from "./WatchCustomizer";
+import ImmersiveStory from "./story/ImmersiveStory";
 import "./index.css";
 import "./atelier.css";
 
@@ -12,6 +12,6 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <WatchCustomizer />
+    <ImmersiveStory />
   </StrictMode>,
 );

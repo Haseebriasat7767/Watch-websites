@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three-stdlib";
 import {
@@ -43,7 +49,31 @@ import {
  *  mobile — set `MODEL_URL` in lib/config.ts to load a hosted GLB instead.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-export function ProceduralWatch({ config }: { config: WatchConfig }) {
+/**
+ * Optional handles onto the animated sub-assemblies. The exhibition experience
+ * uses them to withdraw the case back, spin the rotor and dissolve the bracelet
+ * from inside `useFrame` — without ever re-rendering this component.
+ */
+export type WatchPartRefs = {
+  /** Case back ring + sapphire window: slides away in the calibre chapter. */
+  back?: RefObject<THREE.Group | null>;
+  /** Oscillating weight. */
+  rotor?: RefObject<THREE.Group | null>;
+  /** Domed front sapphire — faded when the camera passes through it. */
+  crystal?: RefObject<THREE.Mesh | null>;
+  /** Bracelet pair, recessed during macro chapters. */
+  bracelet?: RefObject<THREE.Group | null>;
+};
+
+export function ProceduralWatch({
+  config,
+  parts,
+  children,
+}: {
+  config: WatchConfig;
+  parts?: WatchPartRefs;
+  children?: ReactNode;
+}) {
   const materials = useWatchMaterials();
   const finishes = useFaceFinishes();
   const pattern = patternForFace(config.face.id);
@@ -244,7 +274,7 @@ export function ProceduralWatch({ config }: { config: WatchConfig }) {
         position={[0, 0, 0.222]}
         receiveShadow
       />
-      <mesh geometry={geometry.crystal} material={glass} />
+      <mesh ref={parts?.crystal} geometry={geometry.crystal} material={glass} />
 
       {/* screw-down crown between its guards */}
       <mesh geometry={geometry.crown} material={casing} castShadow />
@@ -286,23 +316,28 @@ export function ProceduralWatch({ config }: { config: WatchConfig }) {
         position={[-LUG_X, 0, 0]}
         castShadow
       />
-      <primitive object={bracelet.centerMesh} dispose={null} />
-      <primitive object={bracelet.sideMesh} dispose={null} />
+      <group ref={parts?.bracelet}>
+        <primitive object={bracelet.centerMesh} dispose={null} />
+        <primitive object={bracelet.sideMesh} dispose={null} />
+      </group>
 
-      {/* exhibition case back */}
-      <mesh geometry={geometry.caseBack} material={casing} />
-      <mesh
-        geometry={geometry.window}
-        material={glass}
-        rotation={[Math.PI / 2, 0, 0]}
-        position={[0, 0, -0.25]}
-      />
-      <mesh
-        geometry={geometry.rotor}
-        material={movement}
-        position={[0, 0, -0.181]}
-        rotation={[0, 0, 0.7]}
-      />
+      {/* exhibition case back — withdrawn as a unit when the calibre opens */}
+      <group ref={parts?.back}>
+        <mesh geometry={geometry.caseBack} material={casing} />
+        <mesh
+          geometry={geometry.window}
+          material={glass}
+          rotation={[Math.PI / 2, 0, 0]}
+          position={[0, 0, -0.25]}
+        />
+      </group>
+
+      <group ref={parts?.rotor} position={[0, 0, -0.181]}>
+        <mesh geometry={geometry.rotor} rotation={[0, 0, 0.7]} material={movement} />
+      </group>
+
+      {/* the exhibition layers the calibre in here */}
+      {children}
 
       <MaterialDriver config={config} targets={driverTargets} />
     </group>
