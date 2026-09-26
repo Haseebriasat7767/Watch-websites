@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────────────────
+   AURELIS design tokens
+   ─────────────────────────────────────────────────────────────────────────── */
+@theme {
+  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --color-obsidian-950: #05050a;
+  --color-obsidian-900: #0a0a12;
+  --color-obsidian-800: #12121c;
+
+  --color-champagne-100: #f6ecd2;
+  --color-champagne-200: #ecd9a8;
+  --color-champagne-300: #e2c886;
+  --color-champagne-400: #d4af37;
+  --color-champagne-500: #b8912b;
+  --color-champagne-600: #8c6d1f;
+
+  --animate-shimmer: shimmer 3.2s linear infinite;
+  --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
+  --animate-rise: rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-orbit: orbit 2.4s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sweep {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+  }
+  100% {
+    transform: translateX(320%) skewX(-12deg);
+  }
+}
+
+@keyframes halo {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Base
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    background-color: var(--color-obsidian-950);
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: var(--font-sans);
+    font-weight: 300;
+    letter-spacing: 0.01em;
+    color: rgb(255 255 255 / 0.86);
+    background:
+      radial-gradient(
+        120% 90% at 50% -10%,
+        rgb(212 175 55 / 0.1) 0%,
+        transparent 55%
+      ),
+      radial-gradient(
+        90% 70% at 10% 110%,
+        rgb(60 70 110 / 0.16) 0%,
+        transparent 60%
+      ),
+      linear-gradient(180deg, #05050a 0%, #08080f 45%, #04040a 100%);
+  }
+
+  ::selection {
+    background: rgb(212 175 55 / 0.3);
+    color: #fff;
+  }
+
+  canvas {
+    display: block;
+    touch-action: none;
+  }
+
+  /* Slim, luxury scrollbars for the configurator rail */
+  .rail-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(212 175 55 / 0.35) transparent;
+  }
+  .rail-scroll::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+  .rail-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .rail-scroll::-webkit-scrollbar-thumb {
+    background: rgb(212 175 55 / 0.35);
+    border-radius: 999px;
+  }
+  .rail-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgb(212 175 55 / 0.6);
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Components / utilities
+   ─────────────────────────────────────────────────────────────────────────── */
+@utility glass-panel {
+  background: linear-gradient(
+    160deg,
+    rgb(255 255 255 / 0.075) 0%,
+    rgb(255 255 255 / 0.03) 42%,
+    rgb(255 255 255 / 0.012) 100%
+  );
+  border: 1px solid rgb(255 255 255 / 0.1);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.09) inset,
+    0 24px 70px -28px rgb(0 0 0 / 0.9),
+    0 0 90px -50px rgb(212 175 55 / 0.4);
+}
+
+@utility gold-text {
+  background-image: linear-gradient(
+    100deg,
+    #8c6d1f 0%,
+    #d4af37 22%,
+    #f6ecd2 46%,
+    #e2c886 62%,
+    #b8912b 82%,
+    #f6ecd2 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility hairline {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(212 175 55 / 0.55) 22%,
+    rgb(255 255 255 / 0.28) 50%,
+    rgb(212 175 55 / 0.55) 78%,
+    transparent 100%
+  );
+}
+
+@utility tracking-luxe {
+  letter-spacing: 0.34em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

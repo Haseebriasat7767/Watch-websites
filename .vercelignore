@@ -1,0 +1,14 @@
+# Vercel CLI uploads honour this file. Git-based deploys ship only what is
+# committed, so this mainly keeps `vercel deploy` from pushing local weight.
+node_modules
+.git
+.vercel
+dist
+coverage
+
+# Software-render intermediates (committed PNGs in preview/ are kept so the
+# README renders, but the 3–4 MB PPM plates never need to be uploaded).
+preview/*.ppm
+
+*.log
+.DS_Store
